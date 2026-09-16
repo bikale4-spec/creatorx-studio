@@ -1,4 +1,4 @@
-name: Build CreatorX Release APK
+name: Build CreatorX Signed APK
 
 on:
   workflow_dispatch:
@@ -51,17 +51,29 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Release APK
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/creatorx-release.jks
+
+      - name: Build Signed Release APK
         working-directory: android
-        run: ./gradlew assembleRelease
+        env:
+          RELEASE_STORE_FILE: ${{ github.workspace }}/android/creatorx-release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease
 
       - name: Rename APK
         run: |
           mkdir -p release
-          cp android/app/build/outputs/apk/release/app-release-unsigned.apk release/CreatorX-Studio-release-unsigned.apk
+          cp android/app/build/outputs/apk/release/app-release.apk release/CreatorX-Studio-Signed.apk
 
-      - name: Upload Release APK
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: CreatorX-Studio-Release
-          path: release/CreatorX-Studio-release-unsigned.apk
+          name: CreatorX-Studio-Signed
+          path: release/CreatorX-Studio-Signed.apk
